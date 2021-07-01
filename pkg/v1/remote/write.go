@@ -67,7 +67,9 @@ func Write(ref name.Reference, img v1.Image, options ...Option) (rerr error) {
 func writeImage(ref name.Reference, img v1.Image, o *options, lastUpdate *v1.Update) error {
 	ls, err := img.Layers()
 	if err != nil {
-		return err
+		if !strings.Contains(err.Error(), "not found in tar") {
+			return err
+		}
 	}
 	scopes := scopesForUploadingImage(ref.Context(), ls)
 	tr, err := transport.NewWithContext(o.context, ref.Context().Registry, o.auth, o.transport, scopes)
