@@ -25,6 +25,7 @@ import (
 	"os"
 	"path"
 	"path/filepath"
+	"strings"
 	"sync"
 
 	"github.com/google/go-containerregistry/internal/gzip"
@@ -362,7 +363,21 @@ func (c *compressedImage) Manifest() (*v1.Manifest, error) {
 		} else {
 			l, err := extractFileFromTar(c.opener, p)
 			if err != nil {
-				return nil, err
+				if strings.Contains(err.Error(), "not found in tar") {
+					sha := v1.Hash{
+						Algorithm: "sha256",
+						Hex:       strings.TrimRight(p, "tar.gz"),
+					}
+
+					layer := v1.Descriptor{
+						MediaType: types.DockerLayer,
+						Size:      0,
+						Digest:    sha,
+					}
+
+					c.manifest.Layers = append(c.manifest.Layers, layer)
+				}
+				continue
 			}
 			defer l.Close()
 			sha, size, err := v1.SHA256(l)
