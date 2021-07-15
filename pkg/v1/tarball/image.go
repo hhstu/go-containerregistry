@@ -160,13 +160,19 @@ func (i *image) areLayersCompressed() (bool, error) {
 	if len(i.imgDescriptor.Layers) == 0 {
 		return false, errors.New("0 layers found in image")
 	}
-	layer := i.imgDescriptor.Layers[0]
-	blob, err := extractFileFromTar(i.opener, layer)
-	if err != nil {
-		return false, err
+	var flag bool
+	var err error
+	for _, layer := range i.imgDescriptor.Layers {
+		l := layer
+		blob, err := extractFileFromTar(i.opener, l)
+		if err != nil {
+			continue
+		}
+		defer blob.Close()
+		flag, err = gzip.Is(blob)
+		break
 	}
-	defer blob.Close()
-	return gzip.Is(blob)
+	return flag, err
 }
 
 func (i *image) loadTarDescriptorAndConfig() error {
